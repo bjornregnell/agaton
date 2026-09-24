@@ -20,6 +20,25 @@ trying to protect. The failure is quiet: you get a login prompt, not an error.
 So the isolation has to be deliberate, and the settings you want *shared* between accounts have to
 be merged back in on purpose. That is what agaton is for.
 
+## Install
+
+There is no release binary yet, so this builds from source and needs
+[scala-cli](https://scala-cli.virtuslab.org/install). A native build also needs a C toolchain and
+zlib headers (Debian/Ubuntu: `build-essential zlib1g-dev`); `--jvm` avoids both.
+
+```
+git clone https://github.com/bjornregnell/agaton.git && cd agaton
+scala-cli run get-agaton.sc -- --dry-run     # read it first, then see what it would do
+scala-cli run get-agaton.sc                  # build, install to ~/.local/bin, seed the config
+```
+
+It installs one binary and seeds `$AGATON_HOME` with starter profiles **only if no registry is
+there already** — it never overwrites your profiles.json, and never uses sudo. `--prefix` and
+`--home` move either destination.
+
+The installer is a Scala script rather than a shell script because building already requires
+scala-cli, so it costs no extra dependency and works on Windows too.
+
 ## The model
 
 Four nouns, kept separate because conflating them is what makes existing tooling confusing:
