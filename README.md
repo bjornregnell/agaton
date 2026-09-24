@@ -3,9 +3,9 @@
 Run several coding-agent accounts from one Unix user — side by side, in separate terminals,
 without orphaning a sign-in.
 
-> **Status: early.** Claude Code only, nothing released, the CLI below is a design sketch rather
-> than a description of working software. A functioning prototype exists outside this repository
-> and is being migrated in; see [Roadmap](#roadmap).
+> **Status: early.** Claude Code only, and nothing released yet — no binary to install, no tests.
+> The CLI below does run: `list`, `show`, `who` and `doctor` work against a real two-account setup,
+> and `run` launches. See [Roadmap](#roadmap) for what is missing.
 
 ## Why
 
@@ -37,24 +37,50 @@ second provider be added without redefining everything.
 ## Planned CLI
 
 ```
-agaton as work -- --continue    launch the provider for profile `work`, passing args through
+agaton run work -- --continue   launch the provider for profile `work`, passing args through
+agaton work                     shorthand for the same
 agaton who                      which account each profile holds, and its plan
 agaton list                     the profiles that exist
 agaton show work                the settings that profile would actually apply
 agaton doctor                   check the setup is intact before it fails at you
 ```
 
-`as` rather than `use`: this launches one process under a chosen identity, like `sudo -u`. It does
-not switch a persistent global mode the way `kubectl use-context` does.
+`run` rather than `use`: this launches one process under a chosen identity. It does not switch a
+persistent global mode the way `kubectl use-context` does. Subcommand names are reserved and
+refused as profile names, so the shorthand can never shadow a command.
+
+Profiles live in `$AGATON_HOME/profiles.json`, defaulting to
+`${XDG_CONFIG_HOME:-~/.config}/agaton`. Point `AGATON_HOME` at a synced folder if you want the same
+profiles on several machines.
 
 Named for [Agaton Sax](https://en.wikipedia.org/wiki/Agaton_Sax), who got into places by assuming
 another identity.
 
+## How this differs from Claude Code Projects
+
+Projects (beta) parallelises work **within one account**, so it overlaps with one reason people run
+several logins — wanting more sessions at once. It does not address the others, and those are
+agaton's niche:
+
+| | Projects | agaton |
+|---|---|---|
+| more parallel work | yes, within one account | yes, by using several accounts |
+| **separate identities** | no — one signed-in account | each profile has its own configuration home and sign-in |
+| **separate billing** | no — one plan's limits and invoice | an employer seat and a private subscription stay apart |
+| **separate providers** | Claude Code only | the model allows Claude, Codex, opencode (only Claude implemented) |
+
+So they are complementary rather than competing: if your only problem is "I want more work in
+flight on my own account", use Projects. If the accounts must stay distinct — because one is billed
+to an employer, carries org policy, or must never see the other's material — that is a boundary
+Projects does not draw.
+
 ## Roadmap
 
-- [ ] Import the working Claude Code prototype (a profile registry, a deep-merged settings layer,
-      and two GraalVM native binaries) from its current home outside this repository.
-- [ ] Terminology pass — settle the four nouns above in the code, then the verbs.
+- [x] Import the working Claude Code prototype (a profile registry, a deep-merged settings layer,
+      and a GraalVM native binary) from its previous home outside this repository.
+- [x] Terminology pass — the four nouns above in the code, then the verbs.
+- [ ] Extract a short getting-started from the handbook, once the CLI stops moving.
+- [ ] Tests, and a release binary worth installing.
 - [ ] Second provider, once there is a real one to test against. Designing the abstraction before
       running Codex or opencode would produce the wrong seams.
 
