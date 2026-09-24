@@ -1,30 +1,32 @@
-package claude.multiplan
+package agaton
 
-/** claude-who — which account is each profile signed into, and on what plan. */
-object WhoMain:
+/** `agaton who` — which account each profile is signed into, and on what plan.
+  *
+  * Kept separate from the CLI dispatch because it is the one read-only report
+  * that a wrapper or a statusline might want to call on its own.
+  */
+object Who:
 
-  def main(args: Array[String]): Unit =
-    val registry = Registry.load().fold(
-      err => { Console.err.println(s"claude-who: $err"); sys.exit(2) },
-      identity
-    )
-    val only = args.headOption
-    val wanted = only.fold(registry.profiles)(n => registry.find(n).fold(
-      err => { Console.err.println(s"claude-who: $err"); sys.exit(2) },
-      List(_)
-    ))
+  /** Returns Left with a message the caller can die on, so this stays free of
+    * its own exit handling. */
+  def report(registry: Registry, only: Option[String]): Either[String, Unit] =
+    val wanted = only match
+      case None       => Right(registry.profiles)
+      case Some(name) => registry.find(name).map(List(_))
 
-    for p <- wanted do
-      val tag = if p.isStock then " (stock layout)" else ""
-      println(s"[${p.name}]  ${p.configHome}$tag")
-      Account.of(p) match
-        case Left(err) => println(s"  $err")
-        case Right(a) =>
-          println(s"  account   ${a.email}")
-          println(s"  plan      ${a.plan}")
-          println(s"  org       ${a.org} — ${a.orgType}, you are '${a.role}'")
-          println(s"  tiers     seat=${a.seatTier}  rateLimit=${a.rateLimitTier}")
-          println(s"  fable     ${if a.fableIncluded then "included in plan"
-                                  else "needs usage credits (not included)"}")
-          println(s"  billing   ${a.billing}")
-      println()
+    wanted.map: profiles =>
+      for p <- profiles do
+        val tag = if p.isStock then " (stock layout)" else ""
+        println(s"[${p.name}]  ${p.home}$tag")
+        Account.of(p) match
+          case Left(err) => println(s"  $err")
+          case Right(a) =>
+            println(s"  account   ${a.email}")
+            println(s"  plan      ${a.plan}")
+            println(s"  provider  ${p.provider}")
+            println(s"  org       ${a.org} — ${a.orgType}, you are '${a.role}'")
+            println(s"  tiers     seat=${a.seatTier}  rateLimit=${a.rateLimitTier}")
+            println(s"  fable     ${if a.fableIncluded then "included in plan"
+                                    else "needs usage credits (not included)"}")
+            println(s"  billing   ${a.billing}")
+        println()

@@ -1,10 +1,8 @@
 // Build configuration shared by every main in this directory.
 //
-// Build (one native binary per main class):
-//   scala-cli --power package scala -o bin/claude-profile --native-image -f \
-//     --main-class claude.multiplan.LauncherMain
-//   scala-cli --power package scala -o bin/claude-who     --native-image -f \
-//     --main-class claude.multiplan.WhoMain
+// Build (one native binary):
+//   scala-cli --power package scala -o bin/agaton --native-image -f \
+//     --main-class agaton.AgatonMain
 
 //> using scala 3.9.0
 //> using dep com.lihaoyi::ujson:4.4.3

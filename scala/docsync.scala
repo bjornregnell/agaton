@@ -1,13 +1,13 @@
-package claude.multiplan
+package agaton
 
-import java.nio.file.Files
+import java.nio.file.{Files, Path, Paths}
 import scala.util.matching.Regex
 
-/** claude-profile-draft.md embeds the full text of the sources in this directory. Those
+/** docs/handbook.md embeds the full text of the sources in this directory. Those
   * blocks are generated, and this keeps them honest.
   *
-  *   scala-cli run scala --main-class claude.multiplan.DocSyncMain
-  *   scala-cli run scala --main-class claude.multiplan.DocSyncMain -- --check
+  *   scala-cli run scala --main-class agaton.DocSyncMain
+  *   scala-cli run scala --main-class agaton.DocSyncMain -- --check
   *
   * `--check` writes nothing and exits 1 if any block has drifted, so it works
   * as a pre-commit or CI gate. Blocks are rewritten back-to-front so that
@@ -18,10 +18,19 @@ object DocSyncMain:
   private val Heading: Regex = """(?m)^### `scala/([A-Za-z0-9_.]+)`""".r
   private val Fence = "```scala\n"
 
+  /** The REPOSITORY, not a user's configuration home: this tool maintains the
+    * checked-in handbook, so it must not follow AGATON_HOME. The working
+    * directory, or its parent when run from inside `scala/`; AGATON_REPO wins.
+    */
+  private def repo: Path =
+    sys.env.get("AGATON_REPO").map(Root.expand).getOrElse:
+      val cwd = Paths.get("").toAbsolutePath
+      if Files.isDirectory(cwd.resolve("scala")) then cwd else cwd.getParent
+
   def main(args: Array[String]): Unit =
     val check = args.contains("--check")
-    val doc = Root.dir.resolve("claude-profile-draft.md")
-    val srcDir = Root.dir.resolve("scala")
+    val doc = repo.resolve("docs/handbook.md")
+    val srcDir = repo.resolve("scala")
 
     if !Files.exists(doc) then
       Console.err.println(s"docsync: no $doc")

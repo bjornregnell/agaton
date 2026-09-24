@@ -19,8 +19,8 @@ the plans differ. This file is both the design record and the onboarding doc.
 **Layout.**
 
 ```
-~/asd/claude/
-├── claude-profile-draft.md  this file — authoritative; the Scala blocks in §5
+$AGATON_HOME/
+├── docs/handbook.md  this file — authoritative; the Scala blocks in §5
 │                            are GENERATED from scala/, never hand-edit them
 ├── EMBER.md                 volatile handover state; delete when settled
 ├── config/                  profiles.json (registry) + shared/work/personal
@@ -31,14 +31,14 @@ the plans differ. This file is both the design record and the onboarding doc.
 ```
 
 **Current state.** Both profiles are set up, signed in and verified working
-(§5, "Verified working, both plans live"). `claude-profile doctor` exits 0.
+(§5, "Verified working, both plans live"). `agaton doctor` exits 0.
 
 **Orient yourself in 10 seconds.**
 
 ```
-claude-who                 # which account and plan each profile holds
-claude-profile doctor      # 7 checks; exit 0 means the setup is intact
-claude-profile show work   # the settings that profile will actually apply
+agaton who                 # which account and plan each profile holds
+agaton doctor      # 7 checks; exit 0 means the setup is intact
+agaton show work   # the settings that profile will actually apply
 ```
 
 **If you are here to change something, read §6 first.** It lists the invariants
@@ -137,7 +137,7 @@ plan**. The two accounts state it in different places:
 
 So a Team seat identifies itself through `seatTier`, while a Max account leaves
 that null and names its tier in `organizationRateLimitTier`. Any tool that reads
-only `seatTier` — as the first version of `claude-who` did — will report a Max
+only `seatTier` — as the first version of `agaton who` did — will report a Max
 account as having no plan at all. `Account.plan` in §5 reads both.
 
 One asymmetry worth knowing: on the personal account you are `admin` of your own
@@ -267,7 +267,7 @@ on one plan is genuinely invisible to the other.
 marketplace twice, since `known_marketplaces.json` is per profile too:
 
 ```
-claude-profile work
+agaton work
 /plugin marketplace add bjornregnell/genscalator
 /plugin install genscalator@bjornregnell
 ```
@@ -280,7 +280,7 @@ same repo on the work plan. If that matters — a plugin pulling in an MCP serve
 that should not see work material, say — keep it at user scope on the profile
 that should have it.
 
-Two Syncthing interactions follow from that. A repo under `~/asd` carries its
+Two Syncthing interactions follow from that. A repo under `~/sync` carries its
 `.claude/settings.json` to every machine, so a project-scope plugin propagates
 with the folder; and `.claude/settings.local.json` syncs too, which is fine
 because it is still you on both machines.
@@ -307,7 +307,7 @@ between them. Your work profile already carries account-delivered org policy in
   needs the same translation.
 - `--plugin-dir` and `--plugin-url` load a plugin for one session regardless of
   profile. Useful for trying something on the work plan without installing it
-  there; pass it through with `claude-profile work -- --plugin-dir ./p`.
+  there; pass it through with `agaton work -- --plugin-dir ./p`.
 
 **What does *not* move:** the Claude Code installation itself. On this machine
 `~/.local/bin/claude` resolves to `~/.local/share/claude/versions/2.1.272`, and
@@ -339,7 +339,7 @@ profile — marketplace included, since `known_marketplaces.json` is per config
 home too (§3):
 
 ```
-claude-profile personal          # or work
+agaton personal          # or work
 /plugin marketplace add bjornregnell/genscalator
 /plugin install genscalator@bjornregnell
 /reload-plugins
@@ -421,7 +421,7 @@ independently (`gs status line|mode|box on|off`, or just edit the key).
 
 Two things cost time here, both observed live:
 
-- **Relaunch after changing it** — `claude-profile personal -- --continue` picks
+- **Relaunch after changing it** — `agaton personal -- --continue` picks
   the session back up with the new setting. *Unverified:* whether `/hooks`
   reloads a changed `statusLine` is still unknown. This file previously asserted
   that it does not, on the strength of a `/hooks` run that changed nothing — but
@@ -434,7 +434,7 @@ Two things cost time here, both observed live:
   you want to keep; `config/shared.json` is regenerated into
   `effective-settings.json` at every launch and survives.
 
-Note that `claude-profile show <profile>` **prints** the merge without writing
+Note that `agaton show <profile>` **prints** the merge without writing
 it — `effective-settings.json` is only rewritten by an actual launch. So after
 editing an overlay, `show` reflects the change immediately while the running
 session still holds the old merged file.
@@ -494,14 +494,14 @@ derives goes through `configHome` / `globalJson` so the two layouts stay
 distinguishable.
 
 How this surfaced is worth recording, because the failure was quiet: the first
-version of `claude-who` resolved the account file as `<configDir>/.claude.json`
+version of `agaton who` resolved the account file as `<configDir>/.claude.json`
 for every profile, and duly reported the work profile as *"not signed in yet"* —
 while the session was, visibly, signed in. The tool was reading the file that
 `CLAUDE_CONFIG_DIR=$HOME/.claude` *would* have created, and finding nothing. A
 wrapper written to the same assumption would not have printed a warning; it
 would have opened a signed-out Claude Code and offered a login prompt, with the
 real `~/.claude.json` still sitting there untouched. If you adapt this setup for
-a third account, keep a read-only tool like `claude-who` in the loop: it fails
+a third account, keep a read-only tool like `agaton who` in the loop: it fails
 loudly where a launcher fails silently.
 
 ---
@@ -560,7 +560,7 @@ Properties this buys you:
   Code's own `/config` writes — they still work per profile and are not clobbered.
 - Project-level files (levels 3–4) keep outranking your baseline, as they should.
 - The merged file is written into the profile's own config home, so a stale one
-  can never leak across plans, and `claude-profile show <p>` prints it for
+  can never leak across plans, and `agaton show <p>` prints it for
   inspection before launch.
 
 ### What belongs where
@@ -583,8 +583,8 @@ Scala 3, built with scala-cli to GraalVM native images, installed on `PATH`.
 Two binaries from one source directory.
 
 ```
-~/asd/claude/
-├── claude-profile-draft.md this file
+$AGATON_HOME/
+├── docs/handbook.md this file
 ├── config/
 │   ├── profiles.json       which profiles exist and where they live
 │   ├── shared.json         baseline, both plans
@@ -592,9 +592,9 @@ Two binaries from one source directory.
 │   └── personal.json       personal overrides
 ├── scala/
 │   ├── project.scala       build directives, shared by every main
-│   ├── multiplan.scala     registry, merge, launch, account reader
-│   ├── launcher.scala      main: claude-profile
-│   ├── who.scala           main: claude-who
+│   ├── model.scala     registry, merge, launch, account reader
+│   ├── launcher.scala      main: agaton
+│   ├── who.scala           main: agaton who
 │   └── docsync.scala       main: regenerates the code blocks in this file
 └── bin/                    build output — put this on PATH
 ```
@@ -631,11 +631,9 @@ per `package` invocation.
 ```scala
 // Build configuration shared by every main in this directory.
 //
-// Build (one native binary per main class):
-//   scala-cli --power package scala -o bin/claude-profile --native-image -f \
-//     --main-class claude.multiplan.LauncherMain
-//   scala-cli --power package scala -o bin/claude-who     --native-image -f \
-//     --main-class claude.multiplan.WhoMain
+// Build (one native binary):
+//   scala-cli --power package scala -o bin/agaton --native-image -f \
+//     --main-class agaton.AgatonMain
 
 //> using scala 3.9.0
 //> using dep com.lihaoyi::ujson:4.4.3
@@ -648,17 +646,18 @@ per `package` invocation.
 shaped, and a smaller macro-only dependency keeps the native image free of
 reflection configuration.
 
-### `scala/multiplan.scala` — the library
+### `scala/model.scala` — the library
 
 ```scala
-package claude.multiplan
+package agaton
 
 import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters.*
 import scala.util.{Try, Success, Failure}
 
-/** Where this toolchain keeps its own files. Overridable so the binaries stay
-  * testable and relocatable without a rebuild.
+/** Where agaton keeps its own files: the profile registry and the settings
+  * overlays. Overridable so the binary stays testable and relocatable without a
+  * rebuild.
   */
 object Root:
   def home: Path = Paths.get(sys.props("user.home"))
@@ -668,32 +667,43 @@ object Root:
     else if s.startsWith("~/") then home.resolve(s.drop(2))
     else Paths.get(s)
 
-  /** ~/asd/claude by default; CLAUDE_MULTIPLAN_ROOT wins when set. */
+  /** AGATON_HOME when set, else $XDG_CONFIG_HOME/agaton, else ~/.config/agaton.
+    *
+    * This directory holds `profiles.json` and the overlay files DIRECTLY — there
+    * is no nested `config/` inside it. The copy in this repository under
+    * `config/` is an example, not a second live root.
+    */
   def dir: Path =
-    sys.env.get("CLAUDE_MULTIPLAN_ROOT").map(expand).getOrElse(home.resolve("asd/claude"))
+    sys.env.get("AGATON_HOME").map(expand)
+      .orElse(sys.env.get("XDG_CONFIG_HOME").filter(_.nonEmpty).map(expand(_).resolve("agaton")))
+      .getOrElse(home.resolve(".config").resolve("agaton"))
 
-  def registry: Path = dir.resolve("config/profiles.json")
+  def registry: Path = dir.resolve("profiles.json")
 
-/** One account: its own configuration home plus the settings overlays that
-  * describe how this plan differs from the shared baseline.
+/** One profile: a provider, the account's own configuration home, and the
+  * settings overlays that say how this plan differs from the shared baseline.
   *
-  * `configDir` is empty for the profile that keeps Claude Code's stock layout.
-  * That case is not cosmetic: with CLAUDE_CONFIG_DIR unset the global config
-  * file sits at ~/.claude.json, but setting CLAUDE_CONFIG_DIR=~/.claude would
-  * make Claude Code look for ~/.claude/.claude.json instead — a different,
+  * `explicitHome` is empty for the profile that keeps the provider's stock
+  * layout. That case is not cosmetic: with CLAUDE_CONFIG_DIR unset the global
+  * config file sits at ~/.claude.json, but setting CLAUDE_CONFIG_DIR=~/.claude
+  * would make Claude Code look for ~/.claude/.claude.json instead — a different,
   * empty file, orphaning an existing sign-in. So the stock profile is launched
   * with the variable left alone.
   */
 final case class Profile(
     name: String,
-    configDir: Option[Path],
+    provider: String,
+    explicitHome: Option[Path],
     overlays: List[Path],
     description: String
 ):
-  def isStock: Boolean = configDir.isEmpty
-  def configHome: Path = configDir.getOrElse(Root.home.resolve(".claude"))
+  def isStock: Boolean = explicitHome.isEmpty
+
+  /** The isolated configuration home this profile actually uses. */
+  def home: Path = explicitHome.getOrElse(Root.home.resolve(".claude"))
+
   def globalJson: Path =
-    configDir.fold(Root.home.resolve(".claude.json"))(_.resolve(".claude.json"))
+    explicitHome.fold(Root.home.resolve(".claude.json"))(_.resolve(".claude.json"))
 
 final case class Registry(shared: List[Path], profiles: List[Profile]):
   def find(name: String): Either[String, Profile] =
@@ -701,6 +711,14 @@ final case class Registry(shared: List[Path], profiles: List[Profile]):
       s"unknown profile '$name'; known: ${profiles.map(_.name).mkString(", ")}"
 
 object Registry:
+  /** Subcommand names, which therefore cannot be profile names — otherwise the
+    * `agaton <profile>` shorthand cannot tell `agaton show` from a profile
+    * called "show". Refused at load time with a clear message rather than
+    * resolved silently one way.
+    */
+  val Reserved: Set[String] =
+    Set("run", "who", "list", "show", "doctor", "help", "version")
+
   def load(file: Path = Root.registry): Either[String, Registry] =
     if !Files.exists(file) then Left(s"no profile registry at $file")
     else
@@ -715,7 +733,10 @@ object Registry:
             val profiles = js("profiles").obj.toList.map: (name, spec) =>
               Profile(
                 name = name,
-                configDir = spec.obj.get("configDir")
+                provider = spec.obj.get("provider").map(_.str).getOrElse("claude"),
+                // `home` is the current key; `configDir` is accepted so a registry
+                // written before the rename still loads.
+                explicitHome = spec.obj.get("home").orElse(spec.obj.get("configDir"))
                   .filterNot(_.isNull)
                   .map(v => Root.expand(v.str)),
                 overlays = spec.obj.get("overlays").map(paths).getOrElse(Nil),
@@ -723,6 +744,12 @@ object Registry:
               )
             Registry(shared, profiles.sortBy(_.name))
           }.toEither.left.map(e => s"$file has the wrong shape: ${e.getMessage}")
+            .flatMap: r =>
+              r.profiles.map(_.name).find(Reserved.contains) match
+                case Some(bad) =>
+                  Left(s"$file: '$bad' is a subcommand name and cannot be a profile; " +
+                    s"reserved: ${Reserved.toList.sorted.mkString(", ")}")
+                case None => Right(r)
 
 /** Deep merge that mirrors how Claude Code combines settings across scopes:
   * a later source wins for scalars and merges objects key by key, while list
@@ -751,34 +778,46 @@ object Merge:
 object Launcher:
   /** The merged file is written inside the profile's own configuration home so
     * it is easy to inspect, and so a stale one can never leak to another plan.
-    * Claude Code does not read this name on its own; it is passed explicitly.
+    * The provider does not read this name on its own; it is passed explicitly.
     */
   def effectiveSettings(p: Profile, registry: Registry): Either[String, Path] =
     for merged <- Merge.all(registry.shared ++ p.overlays)
     yield
-      Files.createDirectories(p.configHome)
-      val out = p.configHome.resolve("effective-settings.json")
+      Files.createDirectories(p.home)
+      val out = p.home.resolve("effective-settings.json")
       Files.writeString(out, ujson.write(merged, indent = 2) + "\n")
       out
 
-  def claudeBinary: String = sys.env.getOrElse("CLAUDE_BIN", "claude")
+  /** Only `claude` is implemented. The provider field exists so the registry
+    * format is stable; a second provider needs its own launch shape (its own
+    * home variable and its own settings flag), so it is deliberately not
+    * guessed at here.
+    */
+  def binaryOf(p: Profile): Either[String, String] = p.provider match
+    case "claude" => Right(sys.env.getOrElse("CLAUDE_BIN", "claude"))
+    case other    => Left(s"provider '$other' is not implemented yet (profile '${p.name}')")
 
   def run(p: Profile, settings: Path, args: List[String]): Int =
-    val cmd = (claudeBinary :: "--settings" :: settings.toString :: args).asJava
-    val pb = new ProcessBuilder(cmd).inheritIO()
-    p.configDir.foreach: d =>
-      pb.environment().put("CLAUDE_CONFIG_DIR", d.toAbsolutePath.toString)
-    // Never let an inherited value of these decide the model for a plan that
-    // cannot serve it; the overlay's `model` key is the single source of truth.
-    pb.environment().remove("ANTHROPIC_MODEL")
-    pb.environment().remove("ANTHROPIC_DEFAULT_MODEL")
-    Try(pb.start().waitFor()) match
-      case Success(code) => code
-      case Failure(e) =>
-        Console.err.println(s"could not start ${claudeBinary}: ${e.getMessage}")
-        127
+    binaryOf(p) match
+      case Left(err) =>
+        Console.err.println(err)
+        2
+      case Right(bin) =>
+        val cmd = (bin :: "--settings" :: settings.toString :: args).asJava
+        val pb = new ProcessBuilder(cmd).inheritIO()
+        p.explicitHome.foreach: d =>
+          pb.environment().put("CLAUDE_CONFIG_DIR", d.toAbsolutePath.toString)
+        // Never let an inherited value of these decide the model for a plan that
+        // cannot serve it; the overlay's `model` key is the single source of truth.
+        pb.environment().remove("ANTHROPIC_MODEL")
+        pb.environment().remove("ANTHROPIC_DEFAULT_MODEL")
+        Try(pb.start().waitFor()) match
+          case Success(code) => code
+          case Failure(e) =>
+            Console.err.println(s"could not start $bin: ${e.getMessage}")
+            127
 
-/** Reads the account block Claude Code maintains in <configDir>/.claude.json. */
+/** Reads the account block Claude Code maintains in <home>/.claude.json. */
 final case class Account(
     email: String, org: String, orgType: String,
     role: String, seatTier: String, rateLimitTier: String, billing: String
@@ -800,7 +839,7 @@ final case class Account(
       if seatTier == "-" then orgType else s"$orgType / $seatTier"
 
   /** Fable needs pay-as-you-go credits on Pro and standard Team seats; it is
-    * included on Max and on premium seats. See claude-profile-draft.md §2.
+    * included on Max and on premium seats. See docs/handbook.md §2.
     */
   def fableIncluded: Boolean =
     orgType == "claude_max" || seatTier.endsWith("_premium")
@@ -823,119 +862,146 @@ object Account:
 terminal, so the full-screen TUI, colours and Ctrl-C behave exactly as if you
 had typed `claude` yourself. The parent just waits and forwards the exit code.
 
-### `scala/launcher.scala` — `claude-profile`
+### `scala/cli.scala` — `agaton`
 
 ```scala
-package claude.multiplan
+package agaton
 
 import java.nio.file.Files
 
-/** claude-profile — start Claude Code under one account's configuration home.
+/** agaton — run one coding-agent account, with its own configuration home.
   *
-  *   claude-profile work                 # start the work account
-  *   claude-profile personal -- -p "hi"  # pass arguments through to claude
-  *   claude-profile list                 # profiles and where they live
-  *   claude-profile show personal        # the settings that will be applied
-  *   claude-profile doctor               # check the setup
+  *   agaton run work                 # launch the work profile
+  *   agaton work                     # shorthand for the same
+  *   agaton run personal -- -p "hi"  # pass arguments through to the provider
+  *   agaton who                      # which account each profile holds
+  *   agaton list                     # profiles and where they live
+  *   agaton show personal            # the settings that will be applied
+  *   agaton doctor                   # check the setup
   */
-object LauncherMain:
+object AgatonMain:
 
-  private def usage = """usage: claude-profile <profile> [-- <claude args>...]
-       claude-profile list | show <profile> | doctor
+  private def usage = """usage: agaton run <profile> [-- <provider args>...]
+       agaton <profile> [-- <provider args>...]     (shorthand for run)
+       agaton who [<profile>] | list | show <profile> | doctor
 
-profiles come from ~/asd/claude/config/profiles.json
-(override the root with CLAUDE_MULTIPLAN_ROOT)"""
+profiles come from $AGATON_HOME/profiles.json
+(default: ${XDG_CONFIG_HOME:-~/.config}/agaton)"""
 
   private def die(msg: String): Nothing =
-    Console.err.println(s"claude-profile: $msg")
+    Console.err.println(s"agaton: $msg")
     sys.exit(2)
 
-  def main(args: Array[String]): Unit =
-    val registry = Registry.load().fold(die, identity)
+  /** Strip a leading `--` so both `agaton run work -- -p hi` and
+    * `agaton run work -p hi` pass the same arguments through. */
+  private def passthrough(rest: List[String]): List[String] = rest match
+    case "--" :: tail => tail
+    case other        => other
 
+  private def launch(registry: Registry, name: String, rest: List[String]): Nothing =
+    val p = registry.find(name).fold(die, identity)
+    val settings = Launcher.effectiveSettings(p, registry).fold(die, identity)
+    sys.exit(Launcher.run(p, settings, passthrough(rest)))
+
+  def main(args: Array[String]): Unit =
     args.toList match
-      case Nil | ("-h" | "--help") :: _ =>
+      case Nil | ("-h" | "--help" | "help") :: _ =>
         println(usage)
 
-      case "list" :: _ =>
-        val width = registry.profiles.map(_.name.length).maxOption.getOrElse(0)
-        for p <- registry.profiles do
-          val signedIn = Account.of(p).fold(err => s"($err)", a => s"${a.email} — ${a.org}")
-          val home =
-            if p.isStock then s"${p.configHome}  (stock layout, CLAUDE_CONFIG_DIR unset)"
-            else p.configHome.toString
-          println(s"${p.name.padTo(width, ' ')}  $home")
-          println(s"${" " * width}  $signedIn")
-          if p.description.nonEmpty then println(s"${" " * width}  ${p.description}")
+      case cmd :: rest =>
+        val registry = Registry.load().fold(die, identity)
+        cmd match
+          case "run" =>
+            rest match
+              case name :: tail => launch(registry, name, tail)
+              case Nil          => die("run needs a profile name")
 
-      case "show" :: name :: _ =>
-        val p = registry.find(name).fold(die, identity)
-        val merged = Merge.all(registry.shared ++ p.overlays).fold(die, identity)
-        println(ujson.write(merged, indent = 2))
+          case "who" =>
+            Who.report(registry, rest.headOption).fold(die, identity)
 
-      case "doctor" :: _ =>
-        var problems = 0
-        def check(ok: Boolean, label: String, detail: String = ""): Unit =
-          if !ok then problems += 1
-          val hint = if ok || detail.isEmpty then "" else s" — $detail"
-          println(s"${if ok then "ok  " else "FAIL"}  $label$hint")
+          case "list" =>
+            val width = registry.profiles.map(_.name.length).maxOption.getOrElse(0)
+            for p <- registry.profiles do
+              val signedIn = Account.of(p).fold(err => s"($err)", a => s"${a.email} — ${a.org}")
+              val home =
+                if p.isStock then s"${p.home}  (stock layout, CLAUDE_CONFIG_DIR unset)"
+                else p.home.toString
+              println(s"${p.name.padTo(width, ' ')}  $home")
+              println(s"${" " * width}  $signedIn")
+              if p.description.nonEmpty then println(s"${" " * width}  ${p.description}")
 
-        val onPath = Runtime.getRuntime.exec(Array("which", Launcher.claudeBinary)).waitFor() == 0
-        check(onPath, s"${Launcher.claudeBinary} on PATH")
-        for p <- registry.profiles do
-          check(Files.isDirectory(p.configHome), s"${p.name}: config home ${p.configHome}",
-            "create it, or run the profile once")
-          check(Files.exists(p.configHome.resolve(".credentials.json")),
-            s"${p.name}: signed in", "run it once and use /login")
-          check(Merge.all(registry.shared ++ p.overlays).isRight, s"${p.name}: settings parse")
-        sys.exit(if problems == 0 then 0 else 1)
+          case "show" =>
+            val name = rest.headOption.getOrElse(die("show needs a profile name"))
+            val p = registry.find(name).fold(die, identity)
+            val merged = Merge.all(registry.shared ++ p.overlays).fold(die, identity)
+            println(ujson.write(merged, indent = 2))
 
-      case name :: rest =>
-        val p = registry.find(name).fold(die, identity)
-        val settings = Launcher.effectiveSettings(p, registry).fold(die, identity)
-        val passthrough = rest match
-          case "--" :: tail => tail
-          case other        => other
-        sys.exit(Launcher.run(p, settings, passthrough))
+          case "doctor" =>
+            var problems = 0
+            def check(ok: Boolean, label: String, detail: String = ""): Unit =
+              if !ok then problems += 1
+              val hint = if ok || detail.isEmpty then "" else s" — $detail"
+              println(s"${if ok then "ok  " else "FAIL"}  $label$hint")
+
+            check(Files.isDirectory(Root.dir), s"registry home ${Root.dir}",
+              "set AGATON_HOME, or create the default")
+            for p <- registry.profiles do
+              Launcher.binaryOf(p) match
+                case Left(err) => check(false, s"${p.name}: provider ${p.provider}", err)
+                case Right(bin) =>
+                  val onPath = Runtime.getRuntime.exec(Array("which", bin)).waitFor() == 0
+                  check(onPath, s"${p.name}: $bin on PATH")
+              check(Files.isDirectory(p.home), s"${p.name}: config home ${p.home}",
+                "create it, or run the profile once")
+              check(Files.exists(p.home.resolve(".credentials.json")),
+                s"${p.name}: signed in", "run it once and use /login")
+              check(Merge.all(registry.shared ++ p.overlays).isRight, s"${p.name}: settings parse")
+            sys.exit(if problems == 0 then 0 else 1)
+
+          // Shorthand: a bare profile name means `run`. Reserved names are
+          // refused at registry load, so this cannot shadow a subcommand.
+          case name => launch(registry, name, rest)
 ```
 
-### `scala/who.scala` — `claude-who`
+### `scala/who.scala` — `agaton who`
 
 ```scala
-package claude.multiplan
+package agaton
 
-/** claude-who — which account is each profile signed into, and on what plan. */
-object WhoMain:
+/** `agaton who` — which account each profile is signed into, and on what plan.
+  *
+  * Kept separate from the CLI dispatch because it is the one read-only report
+  * that a wrapper or a statusline might want to call on its own.
+  */
+object Who:
 
-  def main(args: Array[String]): Unit =
-    val registry = Registry.load().fold(
-      err => { Console.err.println(s"claude-who: $err"); sys.exit(2) },
-      identity
-    )
-    val only = args.headOption
-    val wanted = only.fold(registry.profiles)(n => registry.find(n).fold(
-      err => { Console.err.println(s"claude-who: $err"); sys.exit(2) },
-      List(_)
-    ))
+  /** Returns Left with a message the caller can die on, so this stays free of
+    * its own exit handling. */
+  def report(registry: Registry, only: Option[String]): Either[String, Unit] =
+    val wanted = only match
+      case None       => Right(registry.profiles)
+      case Some(name) => registry.find(name).map(List(_))
 
-    for p <- wanted do
-      val tag = if p.isStock then " (stock layout)" else ""
-      println(s"[${p.name}]  ${p.configHome}$tag")
-      Account.of(p) match
-        case Left(err) => println(s"  $err")
-        case Right(a) =>
-          println(s"  account   ${a.email}")
-          println(s"  plan      ${a.plan}")
-          println(s"  org       ${a.org} — ${a.orgType}, you are '${a.role}'")
-          println(s"  tiers     seat=${a.seatTier}  rateLimit=${a.rateLimitTier}")
-          println(s"  fable     ${if a.fableIncluded then "included in plan"
-                                  else "needs usage credits (not included)"}")
-          println(s"  billing   ${a.billing}")
-      println()
+    wanted.map: profiles =>
+      for p <- profiles do
+        val tag = if p.isStock then " (stock layout)" else ""
+        println(s"[${p.name}]  ${p.home}$tag")
+        Account.of(p) match
+          case Left(err) => println(s"  $err")
+          case Right(a) =>
+            println(s"  account   ${a.email}")
+            println(s"  plan      ${a.plan}")
+            println(s"  provider  ${p.provider}")
+            println(s"  org       ${a.org} — ${a.orgType}, you are '${a.role}'")
+            println(s"  tiers     seat=${a.seatTier}  rateLimit=${a.rateLimitTier}")
+            println(s"  fable     ${if a.fableIncluded then "included in plan"
+                                    else "needs usage credits (not included)"}")
+            println(s"  billing   ${a.billing}")
+        println()
 ```
 
 Only `max_5x` / `max_20x` / `pro` in `seatNotes` are guesses; `team_labs_standard`
-is the value actually observed on this machine. Run `claude-who` after signing in
+is the value actually observed on this machine. Run `agaton who` after signing in
 personally and correct the map to whatever the Max account really reports.
 
 ### Prerequisites for the native build
@@ -983,11 +1049,11 @@ machine where you are not admin:
   the link path.
 
   ```
-  mkdir -p ~/asd/claude/.nativelib
-  ln -sf /usr/lib/x86_64-linux-gnu/libz.so.1 ~/asd/claude/.nativelib/libz.so
+  mkdir -p $AGATON_HOME/.nativelib
+  ln -sf /usr/lib/x86_64-linux-gnu/libz.so.1 $AGATON_HOME/.nativelib/libz.so
   ```
 
-  then `--graalvm-args --native-compiler-options=-L$HOME/asd/claude/.nativelib`.
+  then `--graalvm-args --native-compiler-options=-L$AGATON_HOME/.nativelib`.
   This is sound rather than a hack: the linker follows the symlink, reads the
   SONAME, and records a normal `libz.so.1` dependency — `ldd` output is
   identical either way.
@@ -1001,16 +1067,16 @@ is unnecessary and has been deleted.
 Run it after every source change; see §6.
 
 ```scala
-package claude.multiplan
+package agaton
 
-import java.nio.file.Files
+import java.nio.file.{Files, Path, Paths}
 import scala.util.matching.Regex
 
-/** claude-profile-draft.md embeds the full text of the sources in this directory. Those
+/** docs/handbook.md embeds the full text of the sources in this directory. Those
   * blocks are generated, and this keeps them honest.
   *
-  *   scala-cli run scala --main-class claude.multiplan.DocSyncMain
-  *   scala-cli run scala --main-class claude.multiplan.DocSyncMain -- --check
+  *   scala-cli run scala --main-class agaton.DocSyncMain
+  *   scala-cli run scala --main-class agaton.DocSyncMain -- --check
   *
   * `--check` writes nothing and exits 1 if any block has drifted, so it works
   * as a pre-commit or CI gate. Blocks are rewritten back-to-front so that
@@ -1021,10 +1087,19 @@ object DocSyncMain:
   private val Heading: Regex = """(?m)^### `scala/([A-Za-z0-9_.]+)`""".r
   private val Fence = "```scala\n"
 
+  /** The REPOSITORY, not a user's configuration home: this tool maintains the
+    * checked-in handbook, so it must not follow AGATON_HOME. The working
+    * directory, or its parent when run from inside `scala/`; AGATON_REPO wins.
+    */
+  private def repo: Path =
+    sys.env.get("AGATON_REPO").map(Root.expand).getOrElse:
+      val cwd = Paths.get("").toAbsolutePath
+      if Files.isDirectory(cwd.resolve("scala")) then cwd else cwd.getParent
+
   def main(args: Array[String]): Unit =
     val check = args.contains("--check")
-    val doc = Root.dir.resolve("claude-profile-draft.md")
-    val srcDir = Root.dir.resolve("scala")
+    val doc = repo.resolve("docs/handbook.md")
+    val srcDir = repo.resolve("scala")
 
     if !Files.exists(doc) then
       Console.err.println(s"docsync: no $doc")
@@ -1081,18 +1156,16 @@ object DocSyncMain:
 no extra flags — `--no-fallback` and `-O2` come from `project.scala`:
 
 ```
-scala-cli --power package scala -o bin/claude-profile --native-image -f \
-  --main-class claude.multiplan.LauncherMain
-
-scala-cli --power package scala -o bin/claude-who --native-image -f \
-  --main-class claude.multiplan.WhoMain
+scala-cli --power package scala -o bin/agaton --native-image -f \
+  --main-class agaton.AgatonMain
 ```
 
-Then put `~/asd/claude/bin` on `PATH`.
+Then put that `bin/` on `PATH`.
 
-Result: two ~15 MB executables that start in about **5 ms** and link only
+Result: one ~15 MB executable that starts in about **5 ms** and links only
 `libz.so.1`, `libc.so.6` and the loader. About 30 s per image once GraalVM is
-cached.
+cached. (There were two binaries before the rename — `claude-profile` and
+`claude-who`; `who` is now a subcommand of the single `agaton`.)
 
 Check the exit status directly, not through a pipe — see the gotcha about
 `PIPESTATUS`.
@@ -1108,7 +1181,7 @@ native-image would have failed earlier and named the class to register.
 #### Iterating without the native build
 
 ```
-scala-cli run scala --main-class claude.multiplan.LauncherMain -- list
+scala-cli run scala --main-class agaton.AgatonMain -- list
 ```
 
 Same behaviour, JVM startup instead of 5 ms. Use this while editing; build
@@ -1117,36 +1190,36 @@ native only when you are done.
 ### First run of the personal profile
 
 ```
-claude-profile personal        # then /login with the private email
-claude-who                     # confirm the two accounts are distinct
-claude-profile doctor
+agaton personal        # then /login with the private email
+agaton who                     # confirm the two accounts are distinct
+agaton doctor
 ```
 
 ### Everyday use
 
 ```
-claude-profile work                       # the science seat
-claude-profile personal                   # the Max 5x seat
-claude-profile personal -- -p "summarise" # arguments after -- go to claude
-claude-profile show personal              # what settings will actually apply
+agaton work                       # the science seat
+agaton personal                   # the Max 5x seat
+agaton personal -- -p "summarise" # arguments after -- go to claude
+agaton show personal              # what settings will actually apply
 ```
 
 ---
 
 ### Syncthing: keeping build output out of the sync
 
-`~/asd` is a Syncthing folder (id `ojo9p-jyf6f`), so the 30 MB of native
+`~/sync` is a Syncthing folder (a Syncthing folder id), so the 30 MB of native
 binaries and the `.scala-build` / `.bsp` caches would otherwise be replicated to
-every machine. They are excluded by `~/asd/.stignore`.
+every machine. They are excluded by `~/sync/.stignore`.
 
 **How Syncthing ignores work**, per the docs:
 
-- The ignore file must sit in the **folder root** — here `~/asd/.stignore`, not
-  in `~/asd/claude`. Per-subdirectory ignore files are not supported.
+- The ignore file must sit in the **folder root** — here `~/sync/.stignore`, not
+  in `$AGATON_HOME`. Per-subdirectory ignore files are not supported.
 - `.stignore` itself is **never synced**. To share patterns across machines,
   keep them in an ordinary (synced) file and pull it in with `#include`. That is
-  the split used here: `~/asd/.stignore` contains only
-  `#include .stignore-shared`, and `~/asd/.stignore-shared` holds the patterns
+  the split used here: `~/sync/.stignore` contains only
+  `#include .stignore-shared`, and `~/sync/.stignore-shared` holds the patterns
   and travels with the folder. On a new machine you recreate the one-line
   `.stignore` and everything else arrives by itself.
 - Patterns are relative to the folder root. A pattern **without** a leading `/`
@@ -1157,14 +1230,14 @@ every machine. They are excluded by `~/asd/.stignore`.
   when it would otherwise block removing a directory. Worth having on every
   build-output pattern, since those directories do get deleted.
 
-**The anchoring detail that matters here.** `~/asd/bin` contains your own
+**The anchoring detail that matters here.** `~/sync/bin` contains your own
 scripts (`evo-kill`, `lucat-cp`, `update`). An unanchored `bin` pattern would
 match at every depth and silently stop syncing them. The pattern is therefore
 written `/claude/bin`, anchored to the folder root. Syncthing's own expansion
 confirms the difference:
 
 ```
-GET /rest/db/ignores?folder=ojo9p-jyf6f
+GET /rest/db/ignores?folder=<folder-id>
 
 "(?d).scala-build", "(?d)**/.scala-build",   <- unanchored: matches any depth
 "(?d)/claude/bin",  "(?d)/claude/bin/**"     <- anchored: root only
@@ -1177,7 +1250,7 @@ the response means the patterns and the `#include` both resolved.
 C=~/.config/syncthing/config.xml
 K=$(grep -oP '(?<=<apikey>)[^<]+' "$C" | head -1)
 curl -s -H "X-API-Key: $K" \
-  "http://127.0.0.1:8384/rest/db/ignores?folder=ojo9p-jyf6f"
+  "http://127.0.0.1:8384/rest/db/ignores?folder=<folder-id>"
 ```
 
 **Why the binaries are excluded rather than synced.** They are x86-64 Linux
@@ -1189,7 +1262,7 @@ would rather sync the binaries to a machine that cannot build them, delete the
 
 **One pattern to keep an eye on:** `target` is unanchored, which is right for
 sbt and Mill output but would also match a directory you genuinely called
-`target`. Nothing in `~/asd` does today.
+`target`. Nothing in `~/sync` does today.
 
 ---
 
@@ -1205,7 +1278,7 @@ Checked on 2026-09-15 with both accounts signed in:
 | distinct config homes | `~/.claude` vs `~/.claude-personal`, each with its own `sessions/`, `projects/`, `plugins/`, `settings.json` |
 | work config untouched | `~/.claude.json` unchanged while the personal profile was created |
 | settings merge applied | `~/.claude-personal/effective-settings.json` carries the shared baseline plus `model: opus[1m]` |
-| `claude-profile doctor` | all seven checks pass, exit 0 |
+| `agaton doctor` | all seven checks pass, exit 0 |
 
 The most informative result is the last one in the file list. Claude Code's own
 onboarding wrote `{"theme": "dark"}` into
@@ -1245,8 +1318,8 @@ each one silently breaks a profile rather than failing loudly.
    profile overlay, and passes the single result. Reversing that order inverts
    the whole design. (§4)
 
-4. **Syncthing patterns are unanchored by default.** `bin` matches `~/asd/bin`
-   — your own scripts — as well as `~/asd/claude/bin`. The pattern is
+4. **Syncthing patterns are unanchored by default.** `bin` matches `~/sync/bin`
+   — your own scripts — as well as `$AGATON_HOME/bin`. The pattern is
    `/claude/bin` with a leading slash for that reason. (§5, Syncthing)
 
 5. **The plan is not in one field.** A Team seat states it in `seatTier`; a Max
@@ -1258,22 +1331,24 @@ each one silently breaks a profile rather than failing loudly.
 Edit sources in `scala/`, iterate on the JVM, and only then rebuild:
 
 ```
-cd ~/asd/claude
-scala-cli run scala --main-class claude.multiplan.LauncherMain -- list
-scala-cli run scala --main-class claude.multiplan.WhoMain
+cd <the agaton checkout>
+scala-cli run scala --main-class agaton.AgatonMain -- list
+scala-cli run scala --main-class agaton.AgatonMain -- who
 ```
 
-When it behaves, rebuild the native images and re-verify:
+Note the working directory: source edits happen in the **repository**, while
+`AGATON_HOME` points at your own profile registry. They are different places on
+purpose — the second is your configuration, not the project's.
+
+When it behaves, rebuild the native image and re-verify:
 
 ```
-scala-cli --power package scala -o bin/claude-profile --native-image -f \
-  --main-class claude.multiplan.LauncherMain
-scala-cli --power package scala -o bin/claude-who --native-image -f \
-  --main-class claude.multiplan.WhoMain
-claude-who && claude-profile doctor
+scala-cli --power package scala -o bin/agaton --native-image -f \
+  --main-class agaton.AgatonMain
+agaton who && agaton doctor
 ```
 
-`bin/` is symlinked from `~/.local/bin`, so a rebuild takes effect immediately
+If `bin/` is symlinked from `~/.local/bin`, a rebuild takes effect immediately
 with no reinstall step.
 
 **Check the exit status directly.** `scala-cli package ... | tail -30` reports
@@ -1286,7 +1361,7 @@ Edits to the documents here go through a small scratch tool rather than an
 inline interpreter script:
 
 ```
-scala-cli run tmp/anchored-edit.scala -- claude-profile-draft.md tmp/some.patch [--dry-run]
+scala-cli run tmp/anchored-edit.scala -- docs/handbook.md tmp/some.patch [--dry-run]
 ```
 
 The patch file is hunks of `=== OLD` / `=== NEW` blocks. Each anchor must occur
@@ -1320,7 +1395,7 @@ the next one-off tool too. Nothing in `tmp/` is load-bearing for the profiles.
 After changing anything in `scala/`, regenerate rather than hand-editing:
 
 ```
-scala-cli run scala --main-class claude.multiplan.DocSyncMain
+scala-cli run scala --main-class agaton.DocSyncMain
 ```
 
 It rewrites each `### \`scala/<file>\`` block from the file on disk and reports
@@ -1332,9 +1407,9 @@ hence a real tool.
 ### Adding a third profile
 
 Add an entry to `config/profiles.json` with its own `configDir` and overlay
-file, then `claude-profile <name>` and `/login`. Nothing else needs changing —
+file, then `agaton <name>` and `/login`. Nothing else needs changing —
 the registry is data, not code. Points to watch: give it a *new* directory
-(never an existing config home, per invariant 1), and check `claude-who`
+(never an existing config home, per invariant 1), and check `agaton who`
 recognises its plan — if it prints an unfamiliar `orgType`, extend
 `Account.plan` rather than leaving it to fall through to the raw string.
 
@@ -1358,14 +1433,14 @@ Prep, in rough order:
    seat tiers, `oauthAccount` shapes. Split it — the *method* (how to identify a
    plan from `.claude.json`, invariant 5) is the reusable part and belongs in the
    repo; the *answers for this machine* are private and stay here, or in a
-   gitignored `local-notes.md`. Same for `~/asd` and `/home/you` paths in
+   gitignored `local-notes.md`. Same for `~/sync` and `/home/you` paths in
    prose, and for the Syncthing section, which is this machine's setup rather
    than anyone else's.
 2. **Check the code is already location-independent.** Mostly it is:
-   `multiplan.scala:20` reads `CLAUDE_MULTIPLAN_ROOT` and only *defaults* to
-   `~/asd/claude`. Two prose spots still hardcode it — `launcher.scala:18`'s
+   `model.scala:20` reads `AGATON_HOME` and only *defaults* to
+   `$AGATON_HOME`. Two prose spots still hardcode it — `launcher.scala:18`'s
    usage text and this file — and the default itself should probably become
-   `~/.config/claude-multi-profile` with `~/asd/claude` as the local override.
+   `~/.config/claude-multi-profile` with `$AGATON_HOME` as the local override.
 3. **Decide what §5 becomes.** Embedding all five sources in the doc is right
    *here*, where the doc travels alone and Syncthing carries no build output. In
    a repo where the sources sit next to the README it is duplication that
@@ -1373,7 +1448,7 @@ Prep, in rough order:
    parts and link the files; keep DocSync for whatever stays embedded.
 4. **Ship the build.** `scala-cli` build instructions, GraalVM prerequisites,
    the `PIPESTATUS` gotcha, a `doctor` run as the smoke test, and a CI job
-   running `DocSyncMain --check` plus `claude-profile list|show`.
+   running `DocSyncMain --check` plus `agaton list|show`.
 5. **License and cross-links.** Point at genscalator from the README, and file
    the reverse pointer once the profile-awareness question there is settled.
 
@@ -1482,7 +1557,7 @@ if you rewrite them yourself.
   genscalator's `tt statusline --mode-line --box-line` (§3), which gives three
   lines of repo, context, mode and box health — but nothing in them says *which
   plan you are on*, which was the point. The remaining piece is a profile chip.
-  A fourth main class emitting one (`claude-who --chip`) composes badly, since
+  A fourth main class emitting one (`agaton who --chip`) composes badly, since
   `statusLine` runs a single command; more likely shapes are a wrapper script
   that prefixes the chip to `tt statusline`'s output, or upstream support for a
   caller-supplied chip.
@@ -1493,10 +1568,10 @@ if you rewrite them yourself.
   `CLAUDE_CONFIG_DIR` in the six places it hardcodes `$HOME/.claude` (§3), which
   is a small, self-contained correctness change; (b) the **broad idea** — the
   profile registry, deep merge and launcher in `scala/` as a `tt` tool. (b) is a
-  real design question, not a patch: it overlaps the `claude-profile` binary
+  real design question, not a patch: it overlaps the `agaton` binary
   that already works, and it would put account-switching inside a toolbox whose
   scope is otherwise text and files.
-- `claude-profile doctor` could check token expiry — `.credentials.json` holds
+- `agaton doctor` could check token expiry — `.credentials.json` holds
   `expiresAt` — and warn before a session fails mid-task.
 - Nothing currently distinguishes the two terminals visually. A different
   `theme` in `config/personal.json` is the one-line version.
@@ -1518,7 +1593,7 @@ python3 -c "import json;print(json.load(open('$HOME/.claude.json'))['oauthAccoun
 `organizationRole`, `seatTier` and `billingType` live — the whole of §1. The
 plan name as such is *not* stored; `seatTier` is the closest thing to it.
 `~/.claude/.credentials.json` additionally carries `subscriptionType` (`team`
-here) and `rateLimitTier`. This is exactly what `claude-who` automates.
+here) and `rateLimitTier`. This is exactly what `agaton who` automates.
 
 ### Probe where the config home resolves to
 
@@ -1589,19 +1664,19 @@ follow cross-host redirects will not.
   set-it-in-the-shell constraints, quoted from the binary; the precedence table
   and merge rules; the model aliases; the Fable-by-plan rules; and the Scala
   sources compiling under Scala 3.9.0 with `list` / `show` / `doctor` /
-  `claude-who` producing correct output against the real work profile.
+  `agaton who` producing correct output against the real work profile.
 - **Also verified:** plugins are per config home (`genscalator@bjornregnell` is
   installed on personal and absent from work); `DocSyncMain --check` exits 1 on
   drift and 0 when clean, across all five embedded blocks.
-- **Also verified:** both native images build and run. `bin/claude-profile` and
-  `bin/claude-who` were produced with GraalVM 25.0.2 and gcc 13.3.0 using the
+- **Also verified:** both native images build and run. `bin/agaton` and
+  `bin/agaton who` were produced with GraalVM 25.0.2 and gcc 13.3.0 using the
   plain build commands with no workaround flags, start in ~5 ms, and
-  `claude-who` reports the real work account correctly. `--no-fallback` needed
+  `agaton who` reports the real work account correctly. `--no-fallback` needed
   no reflection configuration.
 - **Also verified (2026-09-15):** the genscalator statusline runs on the personal
   profile — all three lines — wired from `config/shared.json` as
   `$HOME/.genscalator/bin/tt statusline --mode-line --box-line` and picked up by
-  a `claude-profile personal -- --continue` relaunch. The bare `tt` form of the
+  a `agaton personal -- --continue` relaunch. The bare `tt` form of the
   same command renders nothing, for the PATH reason in §3.
 - **Resolved since first writing:** both profiles are signed in and verified
   end to end. A Max account reports `seatTier: null` and states its tier in
@@ -1692,7 +1767,7 @@ cs java --available | grep graalvm-community
 - **`shell-snapshots/` is not project-scoped.** Project-level cleanup commands
   will not touch it; it accumulates per config home.
 - **Syncthing ignore patterns are unanchored by default.** `bin` would match
-  `~/asd/bin` — your own scripts — as well as `~/asd/claude/bin`. Anchor with a
+  `~/sync/bin` — your own scripts — as well as `$AGATON_HOME/bin`. Anchor with a
   leading `/` whenever the name is not unique to build output.
 - **`.stignore` never syncs.** Put the patterns in an included file and
   recreate the one-line `.stignore` on each machine, or the exclusions silently
@@ -1706,7 +1781,7 @@ cs java --available | grep graalvm-community
 - **Plugin docs assume `~/.claude`.** Any instruction naming that path — the
   `rm -rf ~/.claude/plugins/cache` fix, for instance — needs translating to
   `~/.claude-personal` on the personal profile.
-- **The statusline reaches a session only through `claude-profile`.** The
+- **The statusline reaches a session only through `agaton`.** The
   `statusLine` key lives in `config/shared.json` and arrives via `--settings`.
   Neither profile's own `settings.json` carries it, so a bare `claude` renders
   no statusline at all. Check how the session was launched before suspecting

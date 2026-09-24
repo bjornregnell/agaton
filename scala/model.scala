@@ -1,11 +1,12 @@
-package claude.multiplan
+package agaton
 
 import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters.*
 import scala.util.{Try, Success, Failure}
 
-/** Where this toolchain keeps its own files. Overridable so the binaries stay
-  * testable and relocatable without a rebuild.
+/** Where agaton keeps its own files: the profile registry and the settings
+  * overlays. Overridable so the binary stays testable and relocatable without a
+  * rebuild.
   */
 object Root:
   def home: Path = Paths.get(sys.props("user.home"))
@@ -15,32 +16,43 @@ object Root:
     else if s.startsWith("~/") then home.resolve(s.drop(2))
     else Paths.get(s)
 
-  /** ~/asd/claude by default; CLAUDE_MULTIPLAN_ROOT wins when set. */
+  /** AGATON_HOME when set, else $XDG_CONFIG_HOME/agaton, else ~/.config/agaton.
+    *
+    * This directory holds `profiles.json` and the overlay files DIRECTLY — there
+    * is no nested `config/` inside it. The copy in this repository under
+    * `config/` is an example, not a second live root.
+    */
   def dir: Path =
-    sys.env.get("CLAUDE_MULTIPLAN_ROOT").map(expand).getOrElse(home.resolve("asd/claude"))
+    sys.env.get("AGATON_HOME").map(expand)
+      .orElse(sys.env.get("XDG_CONFIG_HOME").filter(_.nonEmpty).map(expand(_).resolve("agaton")))
+      .getOrElse(home.resolve(".config").resolve("agaton"))
 
-  def registry: Path = dir.resolve("config/profiles.json")
+  def registry: Path = dir.resolve("profiles.json")
 
-/** One account: its own configuration home plus the settings overlays that
-  * describe how this plan differs from the shared baseline.
+/** One profile: a provider, the account's own configuration home, and the
+  * settings overlays that say how this plan differs from the shared baseline.
   *
-  * `configDir` is empty for the profile that keeps Claude Code's stock layout.
-  * That case is not cosmetic: with CLAUDE_CONFIG_DIR unset the global config
-  * file sits at ~/.claude.json, but setting CLAUDE_CONFIG_DIR=~/.claude would
-  * make Claude Code look for ~/.claude/.claude.json instead — a different,
+  * `explicitHome` is empty for the profile that keeps the provider's stock
+  * layout. That case is not cosmetic: with CLAUDE_CONFIG_DIR unset the global
+  * config file sits at ~/.claude.json, but setting CLAUDE_CONFIG_DIR=~/.claude
+  * would make Claude Code look for ~/.claude/.claude.json instead — a different,
   * empty file, orphaning an existing sign-in. So the stock profile is launched
   * with the variable left alone.
   */
 final case class Profile(
     name: String,
-    configDir: Option[Path],
+    provider: String,
+    explicitHome: Option[Path],
     overlays: List[Path],
     description: String
 ):
-  def isStock: Boolean = configDir.isEmpty
-  def configHome: Path = configDir.getOrElse(Root.home.resolve(".claude"))
+  def isStock: Boolean = explicitHome.isEmpty
+
+  /** The isolated configuration home this profile actually uses. */
+  def home: Path = explicitHome.getOrElse(Root.home.resolve(".claude"))
+
   def globalJson: Path =
-    configDir.fold(Root.home.resolve(".claude.json"))(_.resolve(".claude.json"))
+    explicitHome.fold(Root.home.resolve(".claude.json"))(_.resolve(".claude.json"))
 
 final case class Registry(shared: List[Path], profiles: List[Profile]):
   def find(name: String): Either[String, Profile] =
@@ -48,6 +60,14 @@ final case class Registry(shared: List[Path], profiles: List[Profile]):
       s"unknown profile '$name'; known: ${profiles.map(_.name).mkString(", ")}"
 
 object Registry:
+  /** Subcommand names, which therefore cannot be profile names — otherwise the
+    * `agaton <profile>` shorthand cannot tell `agaton show` from a profile
+    * called "show". Refused at load time with a clear message rather than
+    * resolved silently one way.
+    */
+  val Reserved: Set[String] =
+    Set("run", "who", "list", "show", "doctor", "help", "version")
+
   def load(file: Path = Root.registry): Either[String, Registry] =
     if !Files.exists(file) then Left(s"no profile registry at $file")
     else
@@ -62,7 +82,10 @@ object Registry:
             val profiles = js("profiles").obj.toList.map: (name, spec) =>
               Profile(
                 name = name,
-                configDir = spec.obj.get("configDir")
+                provider = spec.obj.get("provider").map(_.str).getOrElse("claude"),
+                // `home` is the current key; `configDir` is accepted so a registry
+                // written before the rename still loads.
+                explicitHome = spec.obj.get("home").orElse(spec.obj.get("configDir"))
                   .filterNot(_.isNull)
                   .map(v => Root.expand(v.str)),
                 overlays = spec.obj.get("overlays").map(paths).getOrElse(Nil),
@@ -70,6 +93,12 @@ object Registry:
               )
             Registry(shared, profiles.sortBy(_.name))
           }.toEither.left.map(e => s"$file has the wrong shape: ${e.getMessage}")
+            .flatMap: r =>
+              r.profiles.map(_.name).find(Reserved.contains) match
+                case Some(bad) =>
+                  Left(s"$file: '$bad' is a subcommand name and cannot be a profile; " +
+                    s"reserved: ${Reserved.toList.sorted.mkString(", ")}")
+                case None => Right(r)
 
 /** Deep merge that mirrors how Claude Code combines settings across scopes:
   * a later source wins for scalars and merges objects key by key, while list
@@ -98,34 +127,46 @@ object Merge:
 object Launcher:
   /** The merged file is written inside the profile's own configuration home so
     * it is easy to inspect, and so a stale one can never leak to another plan.
-    * Claude Code does not read this name on its own; it is passed explicitly.
+    * The provider does not read this name on its own; it is passed explicitly.
     */
   def effectiveSettings(p: Profile, registry: Registry): Either[String, Path] =
     for merged <- Merge.all(registry.shared ++ p.overlays)
     yield
-      Files.createDirectories(p.configHome)
-      val out = p.configHome.resolve("effective-settings.json")
+      Files.createDirectories(p.home)
+      val out = p.home.resolve("effective-settings.json")
       Files.writeString(out, ujson.write(merged, indent = 2) + "\n")
       out
 
-  def claudeBinary: String = sys.env.getOrElse("CLAUDE_BIN", "claude")
+  /** Only `claude` is implemented. The provider field exists so the registry
+    * format is stable; a second provider needs its own launch shape (its own
+    * home variable and its own settings flag), so it is deliberately not
+    * guessed at here.
+    */
+  def binaryOf(p: Profile): Either[String, String] = p.provider match
+    case "claude" => Right(sys.env.getOrElse("CLAUDE_BIN", "claude"))
+    case other    => Left(s"provider '$other' is not implemented yet (profile '${p.name}')")
 
   def run(p: Profile, settings: Path, args: List[String]): Int =
-    val cmd = (claudeBinary :: "--settings" :: settings.toString :: args).asJava
-    val pb = new ProcessBuilder(cmd).inheritIO()
-    p.configDir.foreach: d =>
-      pb.environment().put("CLAUDE_CONFIG_DIR", d.toAbsolutePath.toString)
-    // Never let an inherited value of these decide the model for a plan that
-    // cannot serve it; the overlay's `model` key is the single source of truth.
-    pb.environment().remove("ANTHROPIC_MODEL")
-    pb.environment().remove("ANTHROPIC_DEFAULT_MODEL")
-    Try(pb.start().waitFor()) match
-      case Success(code) => code
-      case Failure(e) =>
-        Console.err.println(s"could not start ${claudeBinary}: ${e.getMessage}")
-        127
+    binaryOf(p) match
+      case Left(err) =>
+        Console.err.println(err)
+        2
+      case Right(bin) =>
+        val cmd = (bin :: "--settings" :: settings.toString :: args).asJava
+        val pb = new ProcessBuilder(cmd).inheritIO()
+        p.explicitHome.foreach: d =>
+          pb.environment().put("CLAUDE_CONFIG_DIR", d.toAbsolutePath.toString)
+        // Never let an inherited value of these decide the model for a plan that
+        // cannot serve it; the overlay's `model` key is the single source of truth.
+        pb.environment().remove("ANTHROPIC_MODEL")
+        pb.environment().remove("ANTHROPIC_DEFAULT_MODEL")
+        Try(pb.start().waitFor()) match
+          case Success(code) => code
+          case Failure(e) =>
+            Console.err.println(s"could not start $bin: ${e.getMessage}")
+            127
 
-/** Reads the account block Claude Code maintains in <configDir>/.claude.json. */
+/** Reads the account block Claude Code maintains in <home>/.claude.json. */
 final case class Account(
     email: String, org: String, orgType: String,
     role: String, seatTier: String, rateLimitTier: String, billing: String
@@ -147,7 +188,7 @@ final case class Account(
       if seatTier == "-" then orgType else s"$orgType / $seatTier"
 
   /** Fable needs pay-as-you-go credits on Pro and standard Team seats; it is
-    * included on Max and on premium seats. See claude-profile-draft.md §2.
+    * included on Max and on premium seats. See docs/handbook.md §2.
     */
   def fableIncluded: Boolean =
     orgType == "claude_max" || seatTier.endsWith("_premium")
