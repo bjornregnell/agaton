@@ -1,0 +1,17 @@
+{
+  "theme": "dark",
+  "tui": "fullscreen",
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(scala-cli compile:*)",
+      "Bash(scala-cli test:*)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "$HOME/.genscalator/bin/tt statusline --mode-line --box-line"
+  }
+}

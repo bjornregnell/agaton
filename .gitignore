@@ -1,0 +1,7 @@
+# build output
+.bsp/
+.scala-build/
+bin/
+
+# the merged settings file is generated per machine, never committed
+effective-settings.json

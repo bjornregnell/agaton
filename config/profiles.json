@@ -1,0 +1,20 @@
+{
+  "shared": [
+    "config/shared.json"
+  ],
+  "profiles": {
+    "work": {
+      "overlays": [
+        "config/work.json"
+      ],
+      "description": "University org — Claude Team for Scientists, standard seat (stock ~/.claude layout)"
+    },
+    "personal": {
+      "configDir": "~/.claude-personal",
+      "overlays": [
+        "config/personal.json"
+      ],
+      "description": "Private Max 5x"
+    }
+  }
+}
